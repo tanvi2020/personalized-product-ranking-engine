@@ -52,20 +52,35 @@ def ranking(product_df,user):
     # getting unfairly penalized because purchase_score is being multiplied with trusted_rating_score, which 
     # reduces their contribution too much. This makes the ranking overly strict and biases it toward rating, 
     # causing even good products to drop
-    df['trusted_adjusted_purchase_score']=df['purchase_score']*0.5 + 0.5*df['trusted_rating_score'] # creates a gate between 0.5 and 1
+    #df['trusted_adjusted_purchase_score']=df['purchase_score']*(0.5 + 0.5 *df['trusted_rating_score'])  
     # if trusted_rating_score = 0 → purchase keeps 50%
     #if trusted_rating_score = 1 → purchase keeps 100%
     #if trusted_rating_score = 0.6 → purchase keeps 80%
     #So now the system says:
     #"I will reduce popularity a bit if trust is weak, but I will not destroy it."
     
+    df['trusted_adjusted_purchase_score']=df['purchase_score']*(df['trusted_rating_score']**2)# Punishes low trust harder
+    #(0.5 + 0.5 * trusted_rating_score) was too soft, because even low or medium trust still allowed a large 
+    #part of purchase_score to remain. That meant highly purchased products could still rank well even when 
+    #trust was weak. Using (trusted_rating_score ** 2) makes the gate much sharper, so products with weak trust 
+    #lose much more of their purchase advantage. This is better for Quality users because they should rely more
+    #on trustworthy quality evidence and less on raw popularity
+
     # calculate final score as a product of price_score,purchase_score and trusted_rating score if rating exists
     # else final score is just a product of price_score and purchase_score
-    df['final_score']=np.where(
-        df['rating'].isna(),
-        df['price_score']*df['purchase_score'],
-        (params['w1'] * df['trusted_rating_score'] + params['w2'] * df['trusted_adjusted_purchase_score'])*df['price_score']
-    )
+    if persona=='Budget':
+        df['final_score']=np.where(
+            df['rating'].isna(),
+            df['price_score']*df['purchase_score'],
+            (params['w1'] * df['trusted_rating_score'] + params['w2'] * df['trusted_adjusted_purchase_score'])*df['price_score']
+        )
+
+    if persona=='Quality':
+        df['final_score']=np.where(
+            df['rating'].isna(),
+            df['price_score']*(0.3 * df['purchase_score']),# If no rating then only 50% of purchase signal is trusted
+            (params['w1'] * df['trusted_rating_score'] + params['w2'] * df['trusted_adjusted_purchase_score'])*df['price_score']
+        )
     return df.sort_values(by='final_score', ascending=False)
 
 
