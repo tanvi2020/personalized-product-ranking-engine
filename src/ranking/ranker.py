@@ -3,86 +3,79 @@ from sklearn.preprocessing import minmax_scale
 from src.config.parameters import PERSONA_PARAMS
 
 
-def ranking(product_df,user):
-    df=product_df.copy()
-    budget=user.avg_budget
-    persona=user.persona_type
+def ranking(product_df, user):
+    df = product_df.copy()
 
-    if persona=='Budget':
-       params=PERSONA_PARAMS['Budget']
+    budget = user.avg_budget
+    persona = user.persona_type
 
-    elif persona=="Quality":
-        params=PERSONA_PARAMS['Quality']
+    # Dynamic weights from search mode
+    budget_weight = user.get("budget_weight", None)
+    quality_weight = user.get("quality_weight", None)
+
+    # Fallback for old user-based recommendation mode
+    if budget_weight is None or quality_weight is None:
+        if persona == "Budget":
+            budget_weight = 0.8
+            quality_weight = 0.2
+        elif persona == "Quality":
+            budget_weight = 0.2
+            quality_weight = 0.8
+        elif persona == "Balanced":
+            budget_weight = 0.5
+            quality_weight = 0.5
+        else:
+            raise ValueError(f"Unknown persona type: {persona}")
+
+    # Use persona only for price sensitivity parameters
+    if persona == "Budget":
+        params = PERSONA_PARAMS["Budget"]
+    elif persona == "Quality":
+        params = PERSONA_PARAMS["Quality"]
+    elif persona == "Balanced":
+        params = PERSONA_PARAMS["Quality"]
     else:
         raise ValueError(f"Unknown persona type: {persona}")
 
-    df['error']=(df['price']-budget)/budget # error is deviation from user's budget. negative error means under budget, positive error means over budget
+    # Price score
+    df["error"] = (df["price"] - budget) / budget
 
-    df['price_score']=np.where(
-        df['error']<=0,
-            np.exp(-np.abs(df['error'])/params['b_low']),
-            np.exp(-np.abs(df['error'])/params['b_high'])
+    df["price_score"] = np.where(
+        df["error"] <= 0,
+        np.exp(-np.abs(df["error"]) / params["b_low"]),
+        np.exp(-np.abs(df["error"]) / params["b_high"])
     )
-    
-    df['rating_score']=(df['rating']-1)/4 # Rating is between 1 and 5, we want to give higher score to higher rating,
-    # so we subtract 1
-    df['purchase_log']=np.log1p(df['num_purchases']) # using lop1p instead of log to handle zero purchases and 
-    #also to reduce the impact of outliers in num_purchases. This way, the difference between 0 and 1 purchase is more significant than the 
-    # difference between 1000 and 1001 purchases, which makes sense in our context.
-    df['purchase_score']=minmax_scale(df['purchase_log']) # we use minmax scaling to convert purchase score to
-    #range [0,1] so that it is comparable to rating score which is also in range [0,1]
-    
-    # define k, where k is the minimum number of review_count after which a user can start trusting the rating
-    k=20
 
-    # calculte confidence 
-    df['confidence_score']=df['review_count']/(df['review_count']+k) 
-    # this will give us a confidence score between 0 and 1, where 0 means no confidence (0 reviews) and 1 means
-    #  full confidence (infinite reviews). This way, products with few reviews will have a lower confidence score,
-    #  which will reduce the impact of their rating on the final score. 
+    # Rating score
+    df["rating_score"] = (df["rating"] - 1) / 4
 
-    # calculate trusted rating score by multiplying rating score with confidence
-    df['trusted_rating_score']=df['rating_score']*df['confidence_score']
+    # Purchase score
+    df["purchase_log"] = np.log1p(df["num_purchases"])
+    df["purchase_score"] = minmax_scale(df["purchase_log"])
 
-    # purchases should only be rewarded when rating is good. We are doing this so that the ranking should not blindly assume
-    # a product with good purchases as a good quality product ... and later purchase_score should not dominate the final score when rating is bad
-    # So we will multiply purchase_score with trusted_rating_score to get a more balanced score. 
-    # df['validated_purchase_score']=df['purchase_score']*df['trusted_rating_score']
-    # But this rule killed products with mediocre purchases,Products with good rating but medium purchases are 
-    # getting unfairly penalized because purchase_score is being multiplied with trusted_rating_score, which 
-    # reduces their contribution too much. This makes the ranking overly strict and biases it toward rating, 
-    # causing even good products to drop
-    #df['trusted_adjusted_purchase_score']=df['purchase_score']*(0.5 + 0.5 *df['trusted_rating_score'])  
-    # if trusted_rating_score = 0 → purchase keeps 50%
-    #if trusted_rating_score = 1 → purchase keeps 100%
-    #if trusted_rating_score = 0.6 → purchase keeps 80%
-    #So now the system says:
-    #"I will reduce popularity a bit if trust is weak, but I will not destroy it."
-    
-    df['trusted_adjusted_purchase_score']=df['purchase_score']*(df['trusted_rating_score']**2)# Punishes low trust harder
-    #(0.5 + 0.5 * trusted_rating_score) was too soft, because even low or medium trust still allowed a large 
-    #part of purchase_score to remain. That meant highly purchased products could still rank well even when 
-    #trust was weak. Using (trusted_rating_score ** 2) makes the gate much sharper, so products with weak trust 
-    #lose much more of their purchase advantage. This is better for Quality users because they should rely more
-    #on trustworthy quality evidence and less on raw popularity
+    # Trust score
+    k = 20
+    df["confidence_score"] = df["review_count"] / (df["review_count"] + k)
+    df["trusted_rating_score"] = df["rating_score"] * df["confidence_score"]
 
-    # calculate final score as a product of price_score,purchase_score and trusted_rating score if rating exists
-    # else final score is just a product of price_score and purchase_score
-    if persona=='Budget':
-        df['final_score']=np.where(
-            df['rating'].isna(),
-            df['price_score']*df['purchase_score'],
-            (params['w1'] * df['trusted_rating_score'] + params['w2'] * df['trusted_adjusted_purchase_score'])*df['price_score']
-        )
+    # Trust-adjusted purchase score
+    df["trusted_adjusted_purchase_score"] = (
+        df["purchase_score"] * (df["trusted_rating_score"] ** 2)
+    )
 
-    if persona=='Quality':
-        df['final_score']=np.where(
-            df['rating'].isna(),
-            df['price_score']*(0.3 * df['purchase_score']),# If no rating then only 50% of purchase signal is trusted
-            (params['w1'] * df['trusted_rating_score'] + params['w2'] * df['trusted_adjusted_purchase_score'])*df['price_score']
-        )
-    return df.sort_values(by='final_score', ascending=False)
+    # Components
+    df["budget_component"] = df["price_score"]
 
+    df["quality_component"] = np.where(
+        df["rating"].isna(),
+        0.2 * df["purchase_score"],   # weak fallback if rating missing
+        0.7 * df["trusted_rating_score"] + 0.3 * df["trusted_adjusted_purchase_score"]
+    )
 
+    # Final dynamic score
+    df["final_score"] = (
+        budget_weight * df["budget_component"] +
+        quality_weight * df["quality_component"]
+    )
 
-
+    return df.sort_values(by="final_score", ascending=False)
