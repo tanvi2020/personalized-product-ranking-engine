@@ -1,180 +1,316 @@
-# import libraries
 import numpy as np
 import pandas as pd
 import random
 
-from src.ranking.ranker import ranking
-# Helper functions to generate Numerical and Categorical variables
-# Function to generate Products
 
-brands=['Nike','Puma','Adidas','Libas','Levis','H&M','Zara','MAC','Maybelline','SwissBeauty']
-categories=['Clothing','Footwear','Accessories','Cosmetics']
-brand_category_map={
-    "Nike": ["Clothing", "Footwear", "Accessories"],
-    "Puma": ["Clothing", "Footwear", "Accessories"],
-    "Adidas": ["Clothing", "Footwear", "Accessories"],
-    "Libas": ["Clothing"],
-    "Levis": ["Clothing"],
-    "H&M": ["Clothing", "Footwear", "Accessories"],
-    "Zara": ["Clothing", "Footwear", "Accessories"],
-    "MAC": ["Cosmetics"],
-    "Maybelline": ["Cosmetics"],
-    "SwissBeauty": ["Cosmetics"]
+# --------------------------
+# RANDOM SEED
+# --------------------------
+random.seed(42)
+np.random.seed(42)
+
+
+# --------------------------
+# CONFIG
+# --------------------------
+brands = ["Nike", "Puma", "Adidas", "Libas", "Levis", "H&M", "Zara", "MAC", "Maybelline", "SwissBeauty"]
+
+category_weights = {
+    "Clothing": 0.35,
+    "Footwear": 0.30,
+    "Cosmetics": 0.20,
+    "Accessories": 0.15
 }
-sub_category_map={
-    "Clothing": ["Tshirts", "Shirts", "Jeans", "Kurtis", "Dresses"],
-    "Footwear": ["Sneakers", "Sandals", "Boots", "Flats", "Sports Shoes"],
-    "Accessories": ["Bags", "Belts", "Caps", "Watches"],
-    "Cosmetics": ["Lipstick", "Foundation", "Moisturizer", "Sunscreen"]
-    }  
-ratings=[1,2,3,4,5]
-rating_prob=[0.05,0.10,0.25,0.35,0.25]
-colors=['Red','Blue','Green','Yellow','Pink','Purple']
-sizes=['S','M','L','XL','XXL','UK4','UK6','UK8','UK10','UK12','Small','Medium','Large']
 
-category_size_map={'Clothing':['S','M','L','XL','XXL'],
-                   'Footwear':['UK4','UK6','UK8','UK10','UK12'],
-                   'Accessories':['Small','Medium','Large'],
-                   'Cosmetics':['Small','Medium','Large']}
+brand_category_weights = {
+    "Clothing": {
+        "Nike": 0.12, "Puma": 0.10, "Adidas": 0.12,
+        "Libas": 0.18, "Levis": 0.18, "H&M": 0.15, "Zara": 0.15
+    },
+    "Footwear": {
+        "Nike": 0.28, "Puma": 0.22, "Adidas": 0.28,
+        "H&M": 0.10, "Zara": 0.12
+    },
+    "Accessories": {
+        "Nike": 0.15, "Puma": 0.12, "Adidas": 0.12,
+        "H&M": 0.20, "Zara": 0.25, "Levis": 0.16
+    },
+    "Cosmetics": {
+        "MAC": 0.35, "Maybelline": 0.35, "SwissBeauty": 0.30
+    }
+}
 
-delivery_days_range=(1,7)
-price_low=(100,800)
-price_mid=(800,3000)
-price_high=(3000,15000)
+sub_category_weights = {
+    "Clothing": {
+        "Tshirts": 0.24,
+        "Shirts": 0.22,
+        "Jeans": 0.20,
+        "Kurtis": 0.18,
+        "Dresses": 0.16
+    },
+    "Footwear": {
+        "Sneakers": 0.25,
+        "Sports Shoes": 0.30,
+        "Sandals": 0.20,
+        "Flats": 0.15,
+        "Boots": 0.10
+    },
+    "Accessories": {
+        "Bags": 0.32,
+        "Watches": 0.28,
+        "Caps": 0.22,
+        "Belts": 0.18
+    },
+    "Cosmetics": {
+        "Lipstick": 0.28,
+        "Foundation": 0.24,
+        "Moisturizer": 0.26,
+        "Sunscreen": 0.22
+    }
+}
 
-def generate_products(n=500):
-    products=[] # Create an empty list called products
-    for i in range(1,n+1):
-        prod_list=generate_single_product(i) # For each productid i call generate_single_product function
-        products.append(prod_list) # store the output in the products list
-    df=pd.DataFrame(products) # convert the list to a dataframe
-    return df # return 
-    
-# Function to generate Users
-# Main block to Run everything and save CSV
+category_size_map = {
+    "Clothing": ["S", "M", "L", "XL", "XXL"],
+    "Footwear": ["UK4", "UK6", "UK8", "UK10", "UK12"],
+    "Accessories": ["Small", "Medium", "Large"],
+    "Cosmetics": ["Small", "Medium", "Large"],
+}
+
+colors = ["Red", "Blue", "Green", "Yellow", "Pink", "Purple", "Black", "White", "Brown"]
+
+price_bucket_weights = {
+    "price_low": 0.40,
+    "price_mid": 0.45,
+    "price_high": 0.15
+}
+
+price_ranges = {
+    "Clothing": {
+        "price_low": (200, 800),
+        "price_mid": (800, 2500),
+        "price_high": (2500, 8000)
+    },
+    "Footwear": {
+        "price_low": (500, 1500),
+        "price_mid": (1500, 5000),
+        "price_high": (5000, 15000)
+    },
+    "Accessories": {
+        "price_low": (150, 700),
+        "price_mid": (700, 3000),
+        "price_high": (3000, 12000)
+    },
+    "Cosmetics": {
+        "price_low": (100, 500),
+        "price_mid": (500, 2000),
+        "price_high": (2000, 7000)
+    }
+}
+
+brand_price_multiplier = {
+    "Nike": 1.20,
+    "Adidas": 1.20,
+    "Puma": 1.10,
+    "Zara": 1.15,
+    "Levis": 1.10,
+    "H&M": 0.95,
+    "Libas": 0.90,
+    "MAC": 1.25,
+    "Maybelline": 0.85,
+    "SwissBeauty": 0.75
+}
+
+
+# --------------------------
+# HELPERS
+# --------------------------
+def weighted_choice(weight_dict):
+    items = list(weight_dict.keys())
+    weights = list(weight_dict.values())
+    return random.choices(items, weights=weights, k=1)[0]
+
+
+def generate_realistic_price(category, price_bucket, brand):
+    low, high = price_ranges[category][price_bucket]
+
+    # Triangular distribution creates more prices near the middle,
+    # unlike randint which spreads everything equally.
+    mode = (low + high) / 2
+    price = random.triangular(low, high, mode)
+
+    price *= brand_price_multiplier.get(brand, 1.0)
+
+    price = int(round(price / 10) * 10)
+    price = max(low, min(price, high))
+
+    return price
+
+
+def generate_quality(price_bucket):
+    if price_bucket == "price_low":
+        quality = np.random.beta(2, 4)
+    elif price_bucket == "price_mid":
+        quality = np.random.beta(3, 3)
+    else:
+        quality = np.random.beta(5, 2)
+
+    return float(np.clip(quality, 0, 1))
+
+
+# --------------------------
+# PRODUCT GENERATION
+# --------------------------
+def generate_products(n=5000):
+    products = []
+
+    for product_id in range(1, n + 1):
+        products.append(generate_single_product(product_id))
+
+    return pd.DataFrame(products)
+
 
 def generate_single_product(product_id):
-    intrinsic_quality=random.uniform(0,1) # this hidden feature influences rating. It is not directly observable but it affects the rating given by users. We can use this to create a more realistic relationship between product features and ratings.
-    brand_strength=random.uniform(0,1) # Why 0–1 instead of 1–10? Because normalized hidden variables are much easier to combine later. Almost every ML system internally operates on scaled signals.
-    product_age=random.uniform(1,365)# in days
-    # intrinsic quality, brand strength and product_age influence pruchases .
+    # 1. Category, brand, subcategory
+    category = weighted_choice(category_weights)
+    brand = weighted_choice(brand_category_weights[category])
+    sub_category = weighted_choice(sub_category_weights[category])
 
-    quality_component=intrinsic_quality * 2000
-    brand_component=brand_strength * 1500
-    age_component=(product_age/365) * 1500
+    # 2. Price bucket + realistic price
+    price_bucket = weighted_choice(price_bucket_weights)
+    price = generate_realistic_price(category, price_bucket, brand)
 
-    noise=np.random.randint(-300,301)# to make the data more realistic,add uncertainity to the data 
+    # 3. Hidden quality
+    intrinsic_quality = generate_quality(price_bucket)
 
-    base_purchase_signal=(quality_component + brand_component + age_component)  
-    # define types of demands and their probabilities
-    demands=['low','medium','high']
-    probabilities=[0.3,0.5,0.2] # 20% low demand, 60% medium demand, 20% high demand
-    demand_type=np.random.choice(demands,p=probabilities)
-    if demand_type=='low':
-        exposure=np.random.uniform(0.001,0.002) # Exposure is a multiplicative feature we add. Exposure tells how many people have seen the product, we can use this to create realistic product pattern ranges like low esposure products, medium exposure and high/ viral products. 
-    elif demand_type=='medium':
-        exposure=np.random.uniform(0.8,1.2)
-    else: # if demand_type=='high'
-        exposure=np.random.uniform(1.3,1.8)
-    
-    final_purchase_signal=base_purchase_signal * exposure + noise  
-    num_purchases=int(max(0,min(5000,final_purchase_signal)))# max will ensure that we dont have negative purchases and is purchase is >5000 it returns 5000. 
-    brand=random.choice(brands)
-    category=random.choice(brand_category_map[brand])
-    review_noise=np.random.uniform(-5,6) # to add some randomness to review count . review count will be like 10, 20, 50 .. so noise should be very small like +-5.   
-    review_rate=np.random.uniform(0.01,0.03) # generate review rate between 1% to 3%  
-    review_count = int(num_purchases * review_rate+ review_noise)
-    review_count=max(0,review_count) # avoid negative invalid review counts
+    # 4. Brand strength
+    brand_strength = random.uniform(0, 1)
 
-    rating=np.nan
-    threshold=5 # we will only assign ratings to products which have atleast 5 reviews. This is because with very few reviews, the rating can be very unreliable and can be heavily influenced by outliers. By setting a threshold, we ensure that the ratings are based on a more substantial amount of feedback, making them more representative of the product's true quality and customer satisfaction.
-    
-    if review_count>=threshold:
-        base_rating = 1 + 4 * intrinsic_quality # we add 1 so that rating always is in a scale of 1 to 5. Say if intrinsic_qualit=0, then adding +1 will make the rating as 1 not 0.
-        rating_noise_scale= 0.2/np.sqrt(review_count)# find how much noise allowed using noise_scale. 0.2 is the maximum allowed change in the rating 
-        rating_noise=np.random.uniform(-rating_noise_scale,+rating_noise_scale) # we want to add noise in both direction so we use uniform distribution between -noise_scale and +noise_scale. This way we can have some products with slightly higher ratings than their intrinsic quality and some with slightly lower ratings, which is more realistic.
+    # 5. Product age
+    product_age = random.uniform(1, 365)
+
+    # 6. Demand / exposure
+    demand_type = np.random.choice(
+        ["low", "medium", "high"],
+        p=[0.30, 0.50, 0.20]
+    )
+
+    if demand_type == "low":
+        exposure = np.random.uniform(0.02, 0.25)
+    elif demand_type == "medium":
+        exposure = np.random.uniform(0.65, 1.20)
+    else:
+        exposure = np.random.uniform(1.25, 1.90)
+
+    # 7. Purchases
+    quality_component = intrinsic_quality * 2000
+    brand_component = brand_strength * 1500
+    age_component = (product_age / 365) * 1500
+
+    base_purchase_signal = quality_component + brand_component + age_component
+    noise = np.random.randint(-300, 301)
+
+    final_purchase_signal = base_purchase_signal * exposure + noise
+    num_purchases = int(max(0, min(5000, final_purchase_signal)))
+
+    # 8. Reviews
+    review_rate = np.random.uniform(0.01, 0.03)
+    review_noise = np.random.uniform(-5, 6)
+
+    review_count = int(num_purchases * review_rate + review_noise)
+    review_count = max(0, review_count)
+
+    # 9. Rating
+    rating = np.nan
+    threshold = 5
+
+    if review_count >= threshold:
+        base_rating = 1 + 4 * intrinsic_quality
+        rating_noise_scale = 0.2 / np.sqrt(review_count)
+        rating_noise = np.random.uniform(-rating_noise_scale, rating_noise_scale)
+
         rating = base_rating + rating_noise
-        rating=np.clip(rating,1,5) # Ensure that ratings are between 1 and 5. If rating is less than 1, it will be set to 1. If rating is greater than 5, it will be set to 5. This is important because ratings outside this range would not make sense in the context of a typical product review system.
+        rating = float(np.clip(rating, 1, 5))
 
-    if category in sub_category_map:
-        sub_category=random.choice(sub_category_map.get(category,['unknown']))
-
-    price_bucket=random.choices(['price_low','price_mid','price_high'],weights=[0.5,0.4,0.1],k=1)[0]
-
-    if price_bucket=='price_low':
-        price=random.randint(price_low[0],price_low[1])
-    elif price_bucket=='price_mid':
-        price=random.randint(price_mid[0],price_mid[1])
-    else: # if price_bucket=='price_high'
-        price=random.randint(price_high[0],price_high[1])
-    color=random.choice(colors)
-    
-    if category in category_size_map:
-        size=random.choice(category_size_map[category])
-    delivery_days=random.randint(delivery_days_range[0],delivery_days_range[1])
+    # 10. Other attributes
+    color = random.choice(colors)
+    size = random.choice(category_size_map[category])
+    delivery_days = random.randint(1, 7)
 
     return {
-        'product_id': product_id,
-        'brand': brand,
-        'category': category,
-        'sub_category': sub_category,
-        'review_count': review_count,
-        'intrinsic_quality': intrinsic_quality,
-        'brand_strength': brand_strength,
-        'rating': rating,
-        'price': price,
-        'num_purchases': num_purchases,
-        'color': color,
-        'size': size,
-        'delivery_days': delivery_days
+        "product_id": product_id,
+        "brand": brand,
+        "category": category,
+        "sub_category": sub_category,
+        "price_bucket": price_bucket,
+        "price": price,
+        "intrinsic_quality": intrinsic_quality,
+        "brand_strength": brand_strength,
+        "review_count": review_count,
+        "rating": rating,
+        "num_purchases": num_purchases,
+        "color": color,
+        "size": size,
+        "delivery_days": delivery_days,
     }
 
-def generate_users(n):
-    users=[]
-    for i in range(1,n+1):
-        if i<=n//2:
-            persona_type='Budget'
-            avg_budget=random.randint(300,3000)
+
+# --------------------------
+# USER GENERATION
+# --------------------------
+def generate_users(n=500):
+    users = []
+
+    for user_id in range(1, n + 1):
+        persona_type = random.choices(
+            ["Budget", "Quality"],
+            weights=[0.55, 0.45],
+            k=1
+        )[0]
+
+        if persona_type == "Budget":
+            avg_budget = random.randint(500, 4000)
         else:
-            persona_type='Quality'
-            avg_budget=random.randint(3000,15000)
+            avg_budget = random.randint(4000, 15000)
 
-        users.append({'user_id':i,
-                      'persona_type':persona_type,
-                      'avg_budget':avg_budget
-                      })
-        
-    user_df=pd.DataFrame(users)
-    return user_df
+        users.append({
+            "user_id": user_id,
+            "persona_type": persona_type,
+            "avg_budget": avg_budget,
+        })
 
+    return pd.DataFrame(users)
 
 
-if __name__=='__main__':  
-    generate_products(500).to_csv('data/raw/products.csv',index=False) 
-    print('Product csv saved succesfully')
-    #print(generate_single_product(1))
-    generate_users(100).to_csv('data/raw/users.csv',index=False)
-    print('Users csv saved succesfully')
+# --------------------------
+# MAIN
+# --------------------------
+if __name__ == "__main__":
+    products_df = generate_products(5000)
+    users_df = generate_users(500)
 
-    users_df = pd.read_csv("data/raw/users.csv")
-    products_df = pd.read_csv("data/raw/products.csv")
+    products_df.to_csv("data/raw/products.csv", index=False)
+    users_df.to_csv("data/raw/users.csv", index=False)
 
-    print(users_df.head(10))
-    user1 = users_df[users_df['persona_type']=='Budget'].iloc[0]  # first user
-    print("User 1 details :")
-    print(user1)
-    Budget_ranked = ranking(products_df, user1)
+    print("Product csv saved successfully")
+    print("Users csv saved successfully")
 
-    print(Budget_ranked[['product_id', 'price', 'rating', 'num_purchases', 'error',
-                  'price_score', 'rating_score','confidence_score','trusted_rating_score', 'purchase_score', 'final_score']].head(10))
+    print("\nProduct count:", len(products_df))
+    print("User count:", len(users_df))
 
-    user2=users_df[users_df['persona_type']=='Quality'].iloc[0]
-    print('User 2 details:')
-    print(user2)
-    Quality_ranked=ranking(products_df,user2)
-    print(Quality_ranked[['product_id', 'price', 'rating', 'num_purchases', 'error',
-                  'price_score', 'rating_score','confidence_score','trusted_rating_score', 'purchase_score', 'final_score']].head(10))
-    
-   
-    
-   
+    print("\nCategory distribution:")
+    print(products_df["category"].value_counts(normalize=True).round(3))
+
+    print("\nSub-category distribution:")
+    print(products_df["sub_category"].value_counts())
+
+    print("\nQuality by price bucket:")
+    print(products_df.groupby("price_bucket")["intrinsic_quality"].mean())
+
+    print("\nPrice by category:")
+    print(products_df.groupby("category")["price"].describe())
+
+    print("\nMissing rating percentage:")
+    print(products_df["rating"].isna().mean() * 100)
+
+    print("\nProduct sample:")
+    print(products_df.head())

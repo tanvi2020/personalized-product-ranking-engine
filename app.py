@@ -4,7 +4,7 @@ import os
 import sys
 
 # --------------------------------------------------
-# FIX PATH (so Python can find src/)
+# FIX PATH
 # --------------------------------------------------
 project_root = os.path.abspath(os.path.dirname(__file__))
 
@@ -14,12 +14,16 @@ if project_root not in sys.path:
 # --------------------------------------------------
 # IMPORT BACKEND LOGIC
 # --------------------------------------------------
-from src.recommendation.recommender import (
-    get_recommendation_result,
-    recommend_from_query
-)
+from src.recommendation.recommender import get_recommendation_result
+from src.recommendation.intelligent_search import intelligent_search
 
-from src.agent.query_parser import parse_query
+# --------------------------------------------------
+# PAGE CONFIG
+# --------------------------------------------------
+st.set_page_config(
+    page_title="Product Search & Ranking System",
+    layout="wide"
+)
 
 # --------------------------------------------------
 # LOAD DATA
@@ -28,29 +32,170 @@ products_df = pd.read_csv("data/raw/products.csv")
 users_df = pd.read_csv("data/raw/users.csv")
 
 # --------------------------------------------------
-# UI TITLE
+# SIDEBAR
 # --------------------------------------------------
-st.title("🛍️ Product Recommendation System")
+st.sidebar.title("🧠 System Overview")
+st.sidebar.write(
+    """
+    This project simulates an intelligent product search and ranking system.
+
+    Core layers:
+    - Query understanding
+    - Catalog taxonomy matching
+    - Candidate retrieval
+    - Personalized ranking
+    - Explainable recommendations
+    """
+)
+
+st.sidebar.markdown("---")
+st.sidebar.write("Example queries:")
+st.sidebar.code("premium sports shoes under 6000")
+st.sidebar.code("cheap tshirts under 1000")
+st.sidebar.code("premium lipstick under 3000")
+st.sidebar.code("budget watches under 2000")
+
+# --------------------------------------------------
+# TITLE
+# --------------------------------------------------
+st.title("🛍️ Personalized Product Search & Ranking System")
+st.write(
+    "Search products using natural language and get ranked recommendations with simple explanations."
+)
 
 # --------------------------------------------------
 # MODE SELECTION
 # --------------------------------------------------
 mode = st.radio(
-    "Choose Recommendation Mode",
-    ["User-Based", "Search-Based"]
+    "Choose Mode",
+    ["Search-Based", "User-Based"],
+    horizontal=True
 )
 
-# --------------------------------------------------
-# COMMON INPUT
-# --------------------------------------------------
 top_k = st.slider("Number of Recommendations", 3, 20, 10)
+
+# ==================================================
+# SEARCH-BASED MODE
+# ==================================================
+if mode == "Search-Based":
+
+    st.subheader("🔎 Intelligent Product Search")
+
+    query = st.text_input(
+        "Enter your search query",
+        placeholder="e.g. premium sports shoes under 6000 for running"
+    )
+
+    use_llm = st.checkbox(
+        "Use LLM Parser",
+        value=False,
+        help="Keep unchecked unless OpenAI billing/API access is active."
+    )
+
+    if st.button("Search Products"):
+
+        if query.strip() == "":
+            st.warning("Please enter a query.")
+            st.stop()
+
+        result = intelligent_search(
+            product_df=products_df,
+            query=query,
+            top_k=top_k,
+            use_llm=use_llm
+        )
+
+        parsed_query = result["parsed_query"]
+        metadata = result["metadata"]
+        recs = result["recommendations"]
+
+        # --------------------------
+        # PARSED QUERY
+        # --------------------------
+        st.subheader("🧠 Query Understanding")
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        col1.metric("Category", parsed_query.get("category") or "N/A")
+        col2.metric("Subcategory", parsed_query.get("sub_category") or "N/A")
+        col3.metric("Persona", parsed_query.get("persona_type") or "N/A")
+        col4.metric("Max Price", parsed_query.get("max_price") or "N/A")
+
+        with st.expander("View full parsed query"):
+            st.json(parsed_query)
+
+        # --------------------------
+        # RETRIEVAL METADATA
+        # --------------------------
+        st.subheader("📊 Retrieval Summary")
+
+        m1, m2, m3 = st.columns(3)
+
+        m1.metric("Candidate Count", metadata.get("candidate_count", 0))
+        m2.metric(
+            "Relaxation Multiplier",
+            round(metadata.get("relaxation_multiplier", 1.0), 2)
+        )
+
+        relaxed_price = metadata.get("relaxed_max_price")
+        m3.metric(
+            "Relaxed Max Price",
+            int(relaxed_price) if relaxed_price is not None else "N/A"
+        )
+
+        st.caption(
+            f"Budget Weight: {metadata.get('budget_weight')} | "
+            f"Quality Weight: {metadata.get('quality_weight')} | "
+            f"Use Case: {metadata.get('use_case')}"
+        )
+
+        # --------------------------
+        # RECOMMENDATIONS
+        # --------------------------
+        st.subheader("🏆 Recommended Products")
+
+        if recs.empty:
+            st.warning("No products found.")
+        else:
+            display_cols = [
+                "product_id",
+                "brand",
+                "category",
+                "sub_category",
+                "price",
+                "rating",
+                "review_count",
+                "final_score",
+                "recommendation_reason"
+            ]
+
+            available_cols = [col for col in display_cols if col in recs.columns]
+            st.dataframe(recs[available_cols])
+
+            with st.expander("View technical ranking signals"):
+                technical_cols = [
+                    "product_id",
+                    "price_score",
+                    "trusted_rating_score",
+                    "purchase_score",
+                    "use_case_match_score",
+                    "final_score"
+                ]
+
+                available_tech_cols = [col for col in technical_cols if col in recs.columns]
+                st.dataframe(recs[available_tech_cols])
+
+        if len(recs) < top_k:
+            st.info(
+                f"Only {len(recs)} products matched your filters, so showing fewer than requested."
+            )
 
 # ==================================================
 # USER-BASED MODE
 # ==================================================
-if mode == "User-Based":
+else:
 
-    st.subheader("User-Based Recommendation")
+    st.subheader("👤 User-Based Recommendation")
 
     user_id = st.selectbox(
         "Select User ID",
@@ -83,121 +228,57 @@ if mode == "User-Based":
         summary = result["summary"]
         recs = result["recommendations"]
 
-        st.subheader("User Summary")
+        # --------------------------
+        # USER SUMMARY
+        # --------------------------
+        st.subheader("📊 User Summary")
 
-        st.write(f"Persona: {summary['persona_type']}")
-        st.write(f"Budget: {summary['avg_budget']}")
-        st.write(f"Avg Recommended Price: {summary['avg_recommended_price']:.2f}")
-        st.write(f"Avg Intrinsic Quality: {summary['avg_intrinsic_quality']:.3f}")
-        st.write(f"Missing Ratings: {summary['missing_rating_count']} / {summary['total_recommendations']}")
+        col1, col2, col3 = st.columns(3)
 
-        st.subheader("Recommended Products")
+        col1.metric("Persona", summary["persona_type"])
+        col2.metric("Budget", summary["avg_budget"])
+        col3.metric("Total Recommendations", summary["total_recommendations"])
+
+        col4, col5, col6 = st.columns(3)
+
+        col4.metric("Avg Recommended Price", round(summary["avg_recommended_price"], 2))
+        col5.metric("Avg Intrinsic Quality", round(summary["avg_intrinsic_quality"], 3))
+        col6.metric(
+            "Missing Ratings",
+            f"{summary['missing_rating_count']} / {summary['total_recommendations']}"
+        )
+
+        # --------------------------
+        # RECOMMENDATIONS
+        # --------------------------
+        st.subheader("🏆 Recommended Products")
 
         if recs.empty:
             st.warning("No products found.")
         else:
-            st.dataframe(recs[[
+            display_cols = [
                 "product_id",
                 "brand",
                 "category",
                 "sub_category",
                 "price",
+                "rating",
+                "review_count",
                 "final_score",
-                "trusted_rating_score",
-                "purchase_score"
-            ]])
+                "recommendation_reason"
+            ]
 
-# ==================================================
-# SEARCH-BASED MODE (AGENT)
-# ==================================================
-else:
+            available_cols = [col for col in display_cols if col in recs.columns]
+            st.dataframe(recs[available_cols])
 
-    st.subheader("Search-Based Recommendation (Agent Mode)")
-
-    query = st.text_input(
-        "Enter your search query",
-        placeholder="e.g. cheap sneakers under 3000"
-    )
-
-    if st.button("Search Products"):
-
-        if query.strip() == "":
-            st.warning("Please enter a query.")
-
-        else:
-            # --------------------------
-            # STEP 1: PARSE QUERY
-            # --------------------------
-            parsed_query = parse_query(query)
-
-            st.subheader("Parsed Query")
-            st.write(parsed_query)
-
-            # --------------------------
-            # HANDLE MISSING INFO
-            # --------------------------
-            if parsed_query ["max_price"] is None:
-                st.warning("Please mention a price limit, e.g. 'under 3000'.")
-                st.stop()
-
-            if parsed_query ["category"] is None:
-                st.warning("Could not detect category clearly.")
-
-            # --------------------------
-            # STEP 2: GET RECOMMENDATIONS
-            # --------------------------
-            recs =recommend_from_query(
-                    products_df,
-                    category=parsed_query["category"],
-                    sub_category=parsed_query["sub_category"],
-                    max_price=parsed_query["max_price"],
-                    persona_type=parsed_query["persona"],
-                    use_case=parsed_query["use_case"],
-                    budget_weight=parsed_query["budget_weight"],
-                    quality_weight=parsed_query["quality_weight"],
-                    top_k=10
-                )
-
-            # --------------------------
-            # STEP 3: CREATE SUMMARY
-            # --------------------------
-            summary = {
-                "persona_type": parsed_query["persona"],
-                "avg_budget": parsed_query["max_price"],
-                "avg_recommended_price": float(recs["price"].mean()) if not recs.empty else 0,
-                "avg_intrinsic_quality": float(recs["intrinsic_quality"].mean()) if not recs.empty else 0,
-                "missing_rating_count": int(recs["trusted_rating_score"].isna().sum()) if not recs.empty else 0,
-                "total_recommendations": int(len(recs))
-            }
-
-            st.subheader("Search Summary")
-
-            st.write(f"Detected Persona: {summary['persona_type']}")
-            st.write(f"Detected Budget: {summary['avg_budget']}")
-            st.write(f"Avg Price: {summary['avg_recommended_price']:.2f}")
-            st.write(f"Avg Quality: {summary['avg_intrinsic_quality']:.3f}")
-            st.write(f"Missing Ratings: {summary['missing_rating_count']} / {summary['total_recommendations']}")
-
-            # --------------------------
-            # STEP 4: SHOW RESULTS
-            # --------------------------
-            st.subheader("Recommended Products")
-
-            if recs.empty:
-                st.warning("No products found.")
-            else:
-                st.dataframe(recs[[
+            with st.expander("View technical ranking signals"):
+                technical_cols = [
                     "product_id",
-                    "brand",
-                    "category",
-                    "sub_category",
-                    "price",
-                    "final_score",
+                    "price_score",
                     "trusted_rating_score",
-                    "purchase_score"
-                ]])
+                    "purchase_score",
+                    "final_score"
+                ]
 
-            if len(recs) < top_k:
-                st.info(
-                f"Only {len(recs)} products matched your filters, so showing fewer than requested."
-                )
+                available_tech_cols = [col for col in technical_cols if col in recs.columns]
+                st.dataframe(recs[available_tech_cols])

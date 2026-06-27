@@ -12,3 +12,22 @@ PERSONA_PARAMS= {
         'w2':0.3
     }
 }
+USE_CASE_SUBCATEGORY_MAP = {
+    "Sports": {
+        "Footwear": ["Sneakers", "Sports Shoes"],
+        "Clothing": ["Tshirts"],
+        "Accessories": ["Caps", "Watches"]
+    },
+    "Fashion": {
+        "Footwear": ["Flats", "Boots", "Sandals"],
+        "Clothing": ["Dresses", "Kurtis", "Shirts"],
+        "Accessories": ["Bags", "Belts", "Watches"],
+        "Cosmetics": ["Lipstick", "Foundation"]
+    },
+    "Daily Use": {
+        "Footwear": ["Sneakers", "Flats", "Sandals"],
+        "Clothing": ["Tshirts", "Jeans", "Shirts", "Kurtis"],
+        "Accessories": ["Bags", "Watches"],
+        "Cosmetics": ["Moisturizer", "Sunscreen"]
+    }
+}

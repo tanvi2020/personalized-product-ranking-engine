@@ -1,0 +1,95 @@
+﻿query,expected_category,expected_subcategory,expected_persona,expected_max_price,expected_use_case
+cheap footwear under 2000,Footwear,NaN,budget,2000,NaN
+running shoes under budget,Footwear,Sports Shoes,budget,default,running
+moisturizer under 1000,Cosmetics,Moisturizer,budget,1000,NaN
+shoes for party wear under 3000,Footwear,Heels / Sandals / Flats / Boots,budget,3000,party wear
+affordable lipsticks,Cosmetics,Lipsticks,budget,default,NaN
+good quality sneakers under 7000,Footwear,Sneakers,quality,7000,NaN
+premium thsirts ,Clothing,Tshirts,quality,default,NaN
+expensive footwear for party outfits ,Footwear,Heels / Sandals / Flats / Boots,quality,default,party wear
+best dresses for prom night ,Clothing,Dresses,quality,default,party wear
+high quality sunscreens under 4000,Cosmetics,Sunscreens,quality,4000,NaN
+good looking denim collection,Clothing,Jeans,quality,default,NaN
+best shoes for running under 5000,Footwear,Sports Shoes,quality,5000,running
+Accessories under 4999,Accessories,NaN,balanced,4999,NaN
+pretty flying purple boots for party wear,Footwear,Boots,quality,default,party wear
+cheap footwear under 2000,Footwear,NaN,budget,2000,NaN
+running shoes under 4000,Footwear,Sports Shoes,budget,4000,running
+premium tshirts,Clothing,Tshirts,quality,default,NaN
+best sneakers under 5000,Footwear,Sneakers,quality,5000,NaN
+high quality watches,Accessories,Watches,quality,default,NaN
+formal shirts under 3000,Clothing,Shirts,budget,3000,office
+party wear heels,Footwear,Heels,quality,default,party wear
+affordable moisturizers,Cosmetics,Moisturizer,budget,default,NaN
+best sunscreen under 1000,Cosmetics,Sunscreens,quality,1000,NaN
+sports shoes for running,Footwear,Sports Shoes,quality,default,running
+denim jeans for men,Clothing,Jeans,balanced,default,NaN
+premium handbags,Accessories,Handbags,quality,default,NaN
+office wear shirts,Clothing,Shirts,balanced,default,office
+luxury perfumes,Cosmetics,Perfumes,quality,default,NaN
+casual sneakers under 3500,Footwear,Sneakers,budget,3500,casual
+gym shoes under 3000,Footwear,Sports Shoes,budget,3000,gym
+kicks for daily wear,Footwear,Sneakers,balanced,default,daily wear
+formals for office,Clothing,Formal Shirts,balanced,default,office
+shades under 2000,Accessories,Sunglasses,budget,2000,NaN
+hoodies for winter,Clothing,Hoodies,balanced,default,winter
+skin cream under 1000,Cosmetics,Moisturizer,budget,1000,NaN
+face lotion for dry skin,Cosmetics,Moisturizer,balanced,default,dry skin
+party sandals,Footwear,Sandals,quality,default,party wear
+track shoes for running,Footwear,Sports Shoes,quality,default,running
+cool denims,Clothing,Jeans,balanced,default,NaN
+office trousers,Clothing,Trousers,balanced,default,office
+lip color under 700,Cosmetics,Lipsticks,budget,700,NaN
+eye makeup products,Cosmetics,Eye Makeup,balanced,default,NaN
+travel bags under 4000,Accessories,Bags,budget,4000,travel
+sports kicks for gym,Footwear,Sports Shoes,quality,default,gym
+nice shoes,Footwear,NaN,balanced,default,NaN
+good clothes,Clothing,NaN,balanced,default,NaN
+party outfit,Clothing,NaN,quality,default,party wear
+winter wear,Clothing,NaN,balanced,default,winter
+something stylish,NaN,NaN,quality,default,NaN
+fashionable accessories,Accessories,NaN,quality,default,NaN
+daily wear footwear,Footwear,NaN,balanced,default,daily wear
+good cosmetics,Cosmetics,NaN,quality,default,NaN
+premium fashion,NaN,NaN,quality,default,NaN
+comfortable shoes,Footwear,NaN,balanced,default,comfort
+runing shoes under 3000,Footwear,Sports Shoes,budget,3000,running
+moisturiser for dry skin,Cosmetics,Moisturizer,balanced,default,dry skin
+snkers under 5000,Footwear,Sneakers,budget,5000,NaN
+lipstik under 500,Cosmetics,Lipsticks,budget,500,NaN
+accesories for office,Accessories,NaN,balanced,default,office
+tshirtts for men,Clothing,Tshirts,balanced,default,NaN
+sandls for party wear,Footwear,Sandals,quality,default,party wear
+perfumee under 2000,Cosmetics,Perfumes,budget,2000,NaN
+denm jeans,Clothing,Jeans,balanced,default,NaN
+gym shooes,Footwear,Sports Shoes,balanced,default,gym
+cheap premium sneakers,Footwear,Sneakers,balanced,default,NaN
+luxury budget watches,Accessories,Watches,balanced,default,NaN
+best shoes under 500,Footwear,NaN,budget,500,NaN
+premium tshirt under 300,Clothing,Tshirts,balanced,300,NaN
+high quality cheap cosmetics,Cosmetics,NaN,balanced,default,NaN
+luxury handbags under 1000,Accessories,Handbags,balanced,1000,NaN
+affordable premium perfumes,Cosmetics,Perfumes,balanced,default,NaN
+cheap luxury footwear,Footwear,NaN,balanced,default,NaN
+best budget sunglasses,Accessories,Sunglasses,budget,default,NaN
+premium party wear under 1500,Clothing,NaN,balanced,1500,party wear
+premium lipstick under 50,Cosmetics,Lipsticks,quality,50,NaN
+luxury sneakers under 300,Footwear,Sneakers,quality,300,NaN
+party boots for gym,Footwear,Boots,balanced,default,gym
+formal shoes for hiking,Footwear,Formal Shoes,balanced,default,hiking
+winter jackets under 200,Clothing,Jackets,budget,200,winter
+sports watches under 100,Accessories,Watches,budget,100,sports
+bridal heels for running,Footwear,Heels,balanced,default,running
+premium handbags under 500,Accessories,Handbags,quality,500,NaN
+luxury skincare under 100,Cosmetics,Skincare,quality,100,NaN
+office sneakers for wedding,Footwear,Sneakers,balanced,default,wedding
+Footwear,Footwear,NaN,balanced,default,NaN
+Cosmetics under 1000,Cosmetics,NaN,budget,1000,NaN
+Accessories for office,Accessories,NaN,balanced,default,office
+Clothing for winter,Clothing,NaN,balanced,default,winter
+party wear,Clothing,NaN,quality,default,party wear
+premium fashion items,NaN,NaN,quality,default,NaN
+daily wear products,NaN,NaN,balanced,default,daily wear
+budget cosmetics,Cosmetics,NaN,budget,default,NaN
+luxury accessories,Accessories,NaN,quality,default,NaN
+sports footwear,Footwear,Sports Shoes,quality,default,sports

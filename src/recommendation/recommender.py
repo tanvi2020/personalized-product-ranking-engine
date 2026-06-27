@@ -56,27 +56,24 @@ def get_recommendation_result(product_df, user_df, user_id, top_k=10, category=N
 def filter_candidates(product_df, category=None, sub_category=None, min_price=None, max_price=None, use_case=None):
     candidates = product_df.copy()
 
-    # 1. Filter by category
+    # 1. Category is a hard filter
     if category is not None and category != "All":
         candidates = candidates[candidates["category"] == category]
 
-    # 2. Use-case aware filtering
-    if category == "Footwear" and use_case == "Sports":
-        candidates = candidates[
-            candidates["sub_category"].isin(["Sneakers", "Sports Shoes"])
-        ]
+    # 2. Sub-category is hard only when explicitly parsed
+    if sub_category is not None:
+        sub_filtered = candidates[candidates["sub_category"] == sub_category]
 
-    # 3. Normal sub-category filtering
-    elif sub_category is not None:
-        candidates = candidates[candidates["sub_category"] == sub_category]
+        # Keep subcategory filter only if enough candidates remain
+        if len(sub_filtered) >= 10:
+            candidates = sub_filtered
 
-    # 4. Filter by max price
+    # 3. Price filters
     if max_price is not None:
         candidates = candidates[candidates["price"] <= max_price]
 
-    # 5 Filter by min price
     if min_price is not None:
-        candidates=candidates[candidates["price"] >= min_price]
+        candidates = candidates[candidates["price"] >= min_price]
 
     return candidates
 
@@ -132,7 +129,15 @@ def recommend_from_query(product_df, category=None, sub_category=None, min_price
      )
 
      if candidates.empty:
-        return candidates
+        return {
+        "metadata": {
+                "candidate_count": 0,
+                "message": "No candidates found"
+            },
+        "retrieved_candidates": candidates,
+        "recommendations": candidates
+        }
+    
 
      temporary_user = pd.Series({
         "user_id": -1,
@@ -140,18 +145,24 @@ def recommend_from_query(product_df, category=None, sub_category=None, min_price
         "avg_budget": max_price if max_price is not None else product_df["price"].median(),
         "budget_weight": budget_weight,
         "quality_weight": quality_weight,
+        "category": category,
+        "use_case": use_case,
         "relaxation_multiplier": relaxation_multiplier,
         "relaxed_max_price": relaxed_max_price
-    })
-
+})  
      ranked_products = ranking(candidates, temporary_user)
-     print(f'max_price: {max_price}, Relaxation Multiplier: {relaxation_multiplier}, Relaxed Max Price: {relaxed_max_price}, Candidate Count: {len(candidates)}')
-     print("query settings:")
-     print("budget_weight:", budget_weight)
-     print("quality_weight:", quality_weight)
-     print("relaxation_multiplier:", relaxation_multiplier)
-     print("min_price:", min_price)
-     print("relaxed_max_price:", relaxed_max_price)
-     print("candidate_count:", len(candidates))
-     print(candidates[["product_id", "category", "sub_category", "price", "rating", "review_count", "num_purchases"]].sort_values("price").head(10))
-     return ranked_products.head(top_k)
+     return {
+        "metadata": {
+            "max_price": max_price,
+            "relaxation_multiplier": relaxation_multiplier,
+            "relaxed_max_price": relaxed_max_price,
+            "min_price": min_price,
+            "candidate_count": len(candidates),
+            "budget_weight": budget_weight,
+            "quality_weight": quality_weight,
+            "use_case": use_case
+        },
+        "retrieved_candidates": candidates,
+        "recommendations": ranked_products.head(top_k)
+    }
+
