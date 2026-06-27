@@ -1,21 +1,16 @@
 import json
 
-
 try:
     from openai import OpenAI
     from dotenv import load_dotenv
-except:
+except ImportError:
     OpenAI = None
 
     def load_dotenv():
         pass
 
-load_dotenv()
 
-if OpenAI:
-    client = OpenAI()
-else:
-    client = None
+load_dotenv()
 
 
 QUERY_PARSE_SCHEMA = {
@@ -26,7 +21,7 @@ QUERY_PARSE_SCHEMA = {
         "properties": {
             "category": {
                 "type": ["string", "null"],
-                "enum": ["Clothing", "Footwear", "Accessories", "Cosmetics", None]
+                "enum": ["Clothing", "Footwear", "Accessories", "Cosmetics", None],
             },
             "sub_category": {
                 "type": ["string", "null"],
@@ -35,30 +30,28 @@ QUERY_PARSE_SCHEMA = {
                     "Sneakers", "Sandals", "Boots", "Flats", "Sports Shoes",
                     "Bags", "Belts", "Caps", "Watches",
                     "Lipstick", "Foundation", "Moisturizer", "Sunscreen",
-                    None
-                ]
+                    None,
+                ],
             },
-            "max_price": {
-                "type": ["integer", "null"]
-            },
+            "max_price": {"type": ["integer", "null"]},
             "persona": {
                 "type": "string",
-                "enum": ["Budget", "Balanced", "Quality"]
+                "enum": ["Budget", "Balanced", "Quality"],
             },
             "use_case": {
                 "type": ["string", "null"],
-                "enum": ["Sports", "Daily Use", "Fashion", None]
+                "enum": ["Sports", "Daily Use", "Fashion", None],
             },
             "budget_weight": {
                 "type": "number",
                 "minimum": 0,
-                "maximum": 1
+                "maximum": 1,
             },
             "quality_weight": {
                 "type": "number",
                 "minimum": 0,
-                "maximum": 1
-            }
+                "maximum": 1,
+            },
         },
         "required": [
             "category",
@@ -67,18 +60,25 @@ QUERY_PARSE_SCHEMA = {
             "persona",
             "use_case",
             "budget_weight",
-            "quality_weight"
-        ]
+            "quality_weight",
+        ],
     },
-    "strict": True
+    "strict": True,
 }
 
 
 def parse_query_with_llm(query: str, model: str = "gpt-4.1-mini") -> dict:
     """
-    Converts natural language product search query into structured fields.
-    Raw output still goes through validation later.
+    Convert a product search query into structured fields using an LLM.
+
+    The OpenAI client is created inside this function, not at import time.
+    This prevents CI from failing when LLM parsing is disabled.
     """
+
+    if OpenAI is None:
+        raise ImportError("OpenAI package is not installed.")
+
+    client = OpenAI()
 
     response = client.responses.create(
         model=model,
@@ -101,21 +101,21 @@ Rules:
 - budget_weight and quality_weight must sum close to 1.
 - use_case can be Sports, Daily Use, Fashion, or null.
 - Do not invent fields.
-"""
+""",
             },
             {
                 "role": "user",
-                "content": query
-            }
+                "content": query,
+            },
         ],
         text={
             "format": {
                 "type": "json_schema",
                 "name": QUERY_PARSE_SCHEMA["name"],
                 "schema": QUERY_PARSE_SCHEMA["schema"],
-                "strict": True
+                "strict": True,
             }
-        }
+        },
     )
 
     return json.loads(response.output_text)
