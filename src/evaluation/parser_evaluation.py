@@ -180,7 +180,11 @@ def evaluate_parser_output(expected_row, parsed_query):
     }
 
 
-def run_parser_evaluation_pipeline(eval_queries_path, products_df):
+def run_parser_evaluation_pipeline(
+    eval_queries_path,
+    products_df,
+    use_llm=False
+):
     eval_df = pd.read_csv(eval_queries_path)
 
     results = []
@@ -191,7 +195,7 @@ def run_parser_evaluation_pipeline(eval_queries_path, products_df):
         search_output = intelligent_search(
             query=query,
             product_df=products_df,
-            use_llm=False
+            use_llm=use_llm
         )
 
         parsed_query = search_output["parsed_query"]
@@ -210,15 +214,23 @@ def run_parser_evaluation_pipeline(eval_queries_path, products_df):
 if __name__ == "__main__":
     products_df = pd.read_csv("data/raw/products.csv")
 
+    # Change this to False for rule-based parser evaluation.
+    # Change this to True for hybrid LLM parser evaluation.
+    USE_LLM = True
+
     results_df = run_parser_evaluation_pipeline(
         eval_queries_path="data/evaluation/evaluation_queries.csv",
-        products_df=products_df
+        products_df=products_df,
+        use_llm=USE_LLM
     )
 
-    results_df.to_csv(
-        "results/parser_evaluation_results.csv",
-        index=False
+    output_path = (
+        "results/parser_evaluation_results_llm.csv"
+        if USE_LLM
+        else "results/parser_evaluation_results_rule_based.csv"
     )
+
+    results_df.to_csv(output_path, index=False)
 
     print(results_df.head())
-    print("\nParser evaluation completed.")
+    print(f"\nParser evaluation completed. Saved to: {output_path}")
