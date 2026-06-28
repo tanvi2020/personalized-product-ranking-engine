@@ -1,39 +1,37 @@
-# Personalized Product Search & Ranking System
+# Intelligent Product Search & Ranking System
+
+End-to-end product search and ranking system that converts natural language product queries into personalized recommendations.
+
+The system combines rule-based query parsing, LLM-powered query understanding, taxonomy matching, candidate retrieval, dynamic ranking, evaluation pipelines, MLflow tracking, Docker containerization, and GitHub Actions CI.
+
+---
 
 ## Overview
 
-This project builds an end-to-end product search and ranking system that converts natural language queries into personalized product recommendations.
+This project simulates a production-style e-commerce search and recommendation system.
 
-The system understands user intent, retrieves relevant products from a product catalog, ranks them using multiple relevance signals, and provides recommendation explanations to improve transparency and user trust.
+A user can enter queries such as:
 
-A key focus of the project is not only building the search pipeline, but also measuring and improving it through dedicated evaluation frameworks for query understanding, retrieval quality, and ranking quality.
+```text
+best running shoes under 3000
+cheap tshirts below 1000
+premium lipstick
+daily use bag under 2000
+```
 
----
-
-## Problem Statement
-
-Traditional product search systems often rely on keyword matching, popularity, or simple filtering. As a result, users may receive recommendations that do not fully match their intent.
-
-Examples:
-
-* A user searching for "cheap sneakers under 3000" may receive expensive products with high ratings.
-* A user searching for "premium running shoes" may receive budget products because they are popular.
-* Different users may receive similar recommendations despite having different preferences.
-
-The goal of this project is to improve recommendation relevance by combining query understanding, candidate retrieval, personalized ranking, and systematic evaluation.
+The system understands the query, retrieves relevant products, ranks them based on quality, budget fit, popularity, and user intent, and returns explainable recommendations.
 
 ---
 
-## Project Highlights
+## Why This Project
 
-* Built an end-to-end product search and ranking pipeline
-* Developed query understanding and taxonomy matching layers
-* Implemented candidate retrieval and personalized ranking
-* Built parser, retrieval, and ranking evaluation frameworks
-* Achieved Category Match Rate ≈ 0.93
-* Achieved Quality Lift ≈ +0.26
-* Improved average recommendation quality from 0.43 to 0.69
-* Developed a Streamlit application with recommendation explanations
+Product search is not only a ranking problem.
+
+If query understanding fails, retrieval fails.
+If retrieval fails, ranking has poor candidates.
+If ranking overuses popularity, lower-quality products may appear at the top.
+
+This project focuses on building and evaluating the full pipeline, not just training a model.
 
 ---
 
@@ -42,238 +40,234 @@ The goal of this project is to improve recommendation relevance by combining que
 ```text
 User Query
    ↓
-Query Understanding
+Hybrid Query Parser
+   ├── Rule-Based Parser
+   └── LLM Parser
+        ↓
+   Fallback to Rule Parser if LLM fails
    ↓
-Taxonomy Matching
+Validation Layer
+   ↓
+Catalog / Taxonomy Matching
    ↓
 Candidate Retrieval
    ↓
-Ranking Engine
+Dynamic Ranking Engine
    ↓
 Recommendation Explanations
    ↓
 Streamlit UI
 ```
 
-### Evaluation Pipeline
+---
 
-```text
-Evaluation Queries
-   ↓
-Parser Evaluation
-   ↓
-Retrieval Evaluation
-   ↓
-Ranking Evaluation
-   ↓
-Failure Analysis
-   ↓
-System Improvements
-```
+## Key Features
+
+* Natural language product search
+* Rule-based query parser
+* LLM-based query parser using OpenAI API
+* Hybrid fallback parser
+* Query validation layer
+* Catalog taxonomy matching
+* Candidate retrieval
+* Persona-aware ranking
+* Budget-aware ranking
+* Quality-aware ranking
+* Recommendation explanations
+* Parser, retrieval, and ranking evaluation
+* MLflow experiment tracking
+* Dockerized Streamlit app
+* GitHub Actions CI pipeline
 
 ---
 
-## Core Components
+## Dataset
 
-### Product Catalog
+A synthetic e-commerce dataset was generated with 5,000 products across:
 
-A synthetic e-commerce catalog was created containing product information such as:
+* Clothing
+* Footwear
+* Accessories
+* Cosmetics
+
+Each product contains:
 
 * Category
 * Subcategory
+* Brand
 * Price
 * Rating
-* Review Count
-* Number of Purchases
-* Intrinsic Quality (hidden evaluation signal)
+* Review count
+* Number of purchases
+* Intrinsic quality
+* Brand strength
 
-The catalog serves as the foundation for retrieval and ranking.
+User personas were also simulated:
 
-### Query Understanding
+* Budget
+* Quality
+* Balanced
 
-Natural language queries are converted into structured signals including:
+---
+
+## Query Understanding
+
+The system extracts structured signals from user queries:
 
 * Category
 * Subcategory
+* Maximum price
 * Persona
-* Budget Constraints
-* Use Case
+* Use case
+* Budget weight
+* Quality weight
 
-These signals guide downstream retrieval and ranking.
-
-### Taxonomy Matching
-
-Users often use different vocabulary than the catalog.
-
-Examples:
+Example:
 
 ```text
-Sneakers → Sports Shoes
-Kicks → Sports Shoes
-Trainers → Sports Shoes
+Query:
+best running shoes under 3000
 ```
 
-Taxonomy matching helps bridge the gap between user language and catalog labels.
+Parsed output:
 
-### Candidate Retrieval
+```python
+{
+    "category": "Footwear",
+    "sub_category": "Sports Shoes",
+    "max_price": 3000,
+    "persona_type": "Quality",
+    "budget_weight": 0.2,
+    "quality_weight": 0.8,
+    "use_case": "Sports"
+}
+```
 
-The retrieval layer selects a relevant candidate set from the catalog using structured query signals.
+---
 
-The goal of retrieval is to reduce the search space before ranking.
+## LLM Parser
 
-### Ranking Engine
+The LLM parser improves query understanding for natural language queries.
 
-The ranking layer orders retrieved products based on relevance.
+The system uses a hybrid design:
 
-Ranking combines signals such as:
+```text
+Try LLM Parser
+   ↓
+If successful → use LLM output
+   ↓
+If failed → fallback to rule-based parser
+```
 
-* Budget Fit
-* Product Quality
-* Rating Confidence
+This makes the system more robust because the application can still work even if the LLM API fails.
+
+---
+
+## Parser Evaluation Results
+
+The LLM parser was evaluated against the rule-based parser using the same evaluation dataset.
+
+| Metric            | Rule-Based Parser | LLM Parser |
+| ----------------- | ----------------: | ---------: |
+| Category Score    |            94.68% |    100.00% |
+| Subcategory Score |            79.26% |     85.64% |
+| Persona Score     |            60.64% |     89.36% |
+| Max Price Score   |           100.00% |    100.00% |
+| Use Case Score    |            65.96% |     66.49% |
+| Overall Average   |            80.11% |     88.30% |
+
+The largest improvement came from persona detection, where the LLM handled intent words such as “best,” “premium,” “cheap,” and “affordable” better than rule-based logic.
+
+---
+
+## Retrieval Layer
+
+The retrieval layer filters products using parsed query signals:
+
+* Category
+* Subcategory
+* Price constraints
+* Use case
+
+A relaxation strategy is used to avoid overly strict filtering. For example, quality-focused searches may allow a slightly wider price range to avoid empty results.
+
+---
+
+## Ranking Layer
+
+The ranking engine combines multiple signals:
+
+* Budget fit
+* Trusted rating score
+* Review confidence
 * Popularity
-* User Intent
+* Use-case match
+* Persona weights
 
-The objective is to place the most relevant products at the top of the recommendation list.
-
-### Recommendation Explanations
-
-The system generates simple explanations describing why products were recommended.
-
-This improves transparency, interpretability, and user trust.
+The ranking logic avoids relying only on popularity and gives stronger weight to trusted quality signals.
 
 ---
 
-## Evaluation Framework
-
-Instead of evaluating only final recommendations, separate evaluation frameworks were developed for each major stage of the pipeline.
-
-### Parser Evaluation
-
-Measures:
-
-* Category Score
-* Subcategory Score
-* Persona Score
-* Use Case Score
-* Price Constraint Score
-
-### Retrieval Evaluation
-
-Measures:
-
-* Category Match Rate
-* Subcategory Match Rate
-* Empty Retrieval Rate
-
-### Ranking Evaluation
-
-Measures:
-
-* Average Candidate Quality
-* Average Top-10 Quality
-* Quality Lift
-* Top-1 Intrinsic Quality
-
-This layer-wise evaluation approach enables targeted debugging and systematic improvement of the overall system.
-
----
-
-## Results
-
-### Retrieval Results
-
-| Metric                 | Value |
-| ---------------------- | ----- |
-| Category Match Rate    | ~0.93 |
-| Subcategory Match Rate | ~0.61 |
-| Empty Retrieval Rate   | ~0.03 |
-
-Retrieval evaluation revealed vocabulary and taxonomy mismatches between user queries and catalog labels, leading to several improvements in taxonomy matching and candidate selection.
-
-### Ranking Results
+## Ranking Evaluation Results
 
 | Metric                    | Value |
-| ------------------------- | ----- |
+| ------------------------- | ----: |
 | Average Candidate Quality | ~0.43 |
 | Average Top-10 Quality    | ~0.69 |
 | Quality Lift              | ~0.26 |
 | Top-1 Intrinsic Quality   | ~0.78 |
 
-The ranking engine successfully promoted higher-quality products from the retrieved candidate set, resulting in a significant improvement in recommendation quality.
+The ranking engine improved average product quality by promoting stronger products from the retrieved candidate set.
 
 ---
 
-## Failure Analysis
+## MLflow Tracking
 
-The evaluation framework helped identify several important system failures during development.
+MLflow is used to track:
 
-### Query Understanding Failures
+* Parser experiments
+* Retrieval experiments
+* Ranking experiments
+* Parameters
+* Metrics
+* Evaluation artifacts
 
-The parser initially struggled with taxonomy mismatches between user vocabulary and catalog labels, leading to incorrect intent extraction.
-
-### Retrieval Failures
-
-Some subcategories had limited product coverage because of dataset size and distribution issues. This caused retrieval to return broader category-level results instead of specific subcategory results.
-
-### Ranking Failures
-
-Popularity signals were initially dominating the ranking formula, allowing some lower-quality products to appear in top recommendations. The ranking logic was revised to give stronger importance to trusted quality signals.
+This makes experiments reproducible and easier to compare.
 
 ---
 
-## Key Improvements
+## CI/CD
 
-### Query Understanding
+GitHub Actions is used as the CI pipeline.
 
-* Improved taxonomy matching
-* Improved category and subcategory extraction
-* Reduced vocabulary mismatch issues
+On every push, the pipeline automatically:
 
-### Retrieval
+```text
+1. Checks out the repository
+2. Sets up Python
+3. Installs dependencies
+4. Runs parser evaluation
+5. Runs retrieval evaluation
+6. Runs ranking evaluation
+7. Builds the Docker image
+```
 
-* Increased catalog size
-* Introduced weighted sampling
-* Improved subcategory coverage
+This helps catch production issues before deployment.
 
-### Ranking
-
-* Reduced excessive popularity influence
-* Strengthened quality signals
-* Improved recommendation quality
-
-### Evaluation
-
-* Built parser evaluation framework
-* Built retrieval evaluation framework
-* Built ranking evaluation framework
-* Enabled layer-wise debugging and failure analysis
+During CI setup, the pipeline caught a real bug where the OpenAI client was initialized during import. The parser was refactored so the OpenAI client is created only when the LLM parser is actually used.
 
 ---
 
-## Key Learning
+## Docker
 
-One of the biggest lessons from this project was that recommendation quality is a pipeline problem rather than a ranking problem.
+The Streamlit app is containerized using Docker.
 
-A failure in query understanding affects retrieval.
+The project uses separate dependency files:
 
-A failure in retrieval affects ranking.
+* `requirements.txt` for full project evaluation and MLflow tracking
+* `requirements-app.txt` for the lightweight Streamlit Docker app
 
-A failure in ranking affects final recommendations.
-
-This led to the development of layer-wise evaluation frameworks that made it possible to identify failures, trace root causes, and improve the system systematically.
-
----
-
-## Future Improvements
-
-* MLflow experiment tracking
-* LLM-based query understanding
-* Semantic retrieval using vector search
-* Learning-to-rank models
-* Stronger validation layer
-* Docker deployment
-* GitHub Actions CI/CD
-* Real user feedback integration
+This keeps the application container smaller and avoids unnecessary runtime dependencies.
 
 ---
 
@@ -284,12 +278,72 @@ This led to the development of layer-wise evaluation frameworks that made it pos
 * NumPy
 * Scikit-learn
 * Streamlit
-* Jupyter Notebook
+* OpenAI API
+* MLflow
+* Docker
+* GitHub Actions
+* Git
+
+---
+
+## Project Structure
+
+```text
+.
+├── app.py
+├── Dockerfile
+├── requirements.txt
+├── requirements-app.txt
+├── data/
+│   ├── raw/
+│   └── evaluation/
+├── mlflow_tracking/
+├── src/
+│   ├── data_prep/
+│   ├── parser/
+│   ├── validation/
+│   ├── recommendation/
+│   ├── ranking/
+│   └── evaluation/
+└── .github/
+    └── workflows/
+        └── ci.yml
+```
+
+---
+
+## Key Learnings
+
+The biggest learning from this project is that recommendation quality is a full-system problem.
+
+A better ranking formula alone is not enough.
+
+The system needs:
+
+* Strong query understanding
+* Reliable retrieval
+* Robust ranking
+* Layer-wise evaluation
+* Experiment tracking
+* CI checks
+* Reproducible deployment setup
+
+This project helped turn a recommendation notebook into a production-style ML system.
+
+---
+
+## Future Improvements
+
+* Add semantic retrieval using vector embeddings
+* Add learning-to-rank model
+* Add online A/B testing simulation
+* Add FastAPI serving layer
+* Add monitoring for drift and degraded search quality
+* Connect to a real product catalog or database
 
 ---
 
 ## Author
 
 **Tanvi Ranganekar**
-
 M.Sc. Data Science
